@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f7f7f7;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        h2 {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .points {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+        }
+        .btn-custom {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 1rem;
+        }
+        .btn-primary {
+            background-color: #4FD8C2;
+            border-color: #4FD8C2;
+        }
+        .btn-primary:hover {
+            background-color: #4FD8C2;
+            border-color: #4FD8C2;
+        }
+        .btn-secondary {
+            background-color: #f8f9fa;
+            border-color: #f8f9fa;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background-color: #e2e6ea;
+            border-color: #dae0e5;
+        }
+        .btn-back {
+            background-color: #ff9f00;
+            border-color: #ff9f00;
+        }
+        .btn-back:hover {
+            background-color: #e68900;
+            border-color: #e68900;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="mb-4">Tích Điểm của Bạn</h2>
+        <h1 class="points" id="points">{{ user[4] }}</h1>
+
+        <p id="qr-message" style="color: green; font-weight: bold;"></p>
+
+        <!-- Nút để quét mã QR -->
+        <button id="startScanBtn" class="btn btn-primary btn-custom">Quét mã QR</button>
+
+        <!-- Video element to show camera feed -->
+        <video id="video" width="300" height="200" style="display:none;" autoplay></video>
+        <canvas id="canvas" width="300" height="200" style="display:none;"></canvas>
+
+        <!-- Nút Logout -->
+        <button id="logoutBtn" onclick="logout()" class="btn btn-secondary btn-custom" style="display: block;">Đăng xuất</button>
+
+        <!-- Nút về trang chủ -->
+        <button id="homeBtn" class="btn btn-back btn-custom" style="display: none;" onclick="goHome()">Về trang chủ</button>
+    </div>
+
+    <script>
+        const startScanBtn = document.getElementById("startScanBtn");
+        const logoutBtn = document.getElementById("logoutBtn");
+        const video = document.getElementById("video");
+        const canvas = document.getElementById("canvas");
+        const qrMessage = document.getElementById("qr-message");
+        const homeBtn = document.getElementById("homeBtn");
+
+        let scanning = false;
+        let lastScannedQRCode = localStorage.getItem("lastScannedQRCode");
+
+        // Bắt đầu quét QR
+        startScanBtn.addEventListener("click", async function() {
+            startScanBtn.style.display = "none";
+            logoutBtn.style.display = "none";
+
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            video.srcObject = stream;
+            video.style.display = "block";
+
+            scanning = true;
+            requestAnimationFrame(scanQRCode);
+        });
+
+        function scanQRCode() {
+            if (!scanning) return;
+
+            const context = canvas.getContext("2d");
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+            if (code) {
+                if (code.data === lastScannedQRCode) {
+                    qrMessage.textContent = "Mã QR không hợp lệ";
+                    qrMessage.style.color = "red";
+                    stopScan();
+                    startScanBtn.style.display = "none";
+                    logoutBtn.style.display = "none";
+                    homeBtn.style.display = "block";
+                    return;
+                }
+
+                lastScannedQRCode = code.data;
+                localStorage.setItem("lastScannedQRCode", lastScannedQRCode);
+
+                const qrData = code.data.trim();
+                const qrDataParts = qrData.split(':');
+
+                if (qrDataParts.length < 2 || isNaN(qrDataParts[1])) {
+                    qrMessage.textContent = "Mã QR không hợp lệ";
+                    qrMessage.style.color = "red";
+                    stopScan();
+                    startScanBtn.style.display = "none";
+                    logoutBtn.style.display = "none";
+                    homeBtn.style.display = "block";
+                    return;
+                }
+
+                qrMessage.textContent = `Chúc mừng bạn được cộng ${qrDataParts[1]} điểm!`;
+                qrMessage.style.color = "green";
+
+                fetch('/process_qr', {
+                    method: 'POST',
+                    body: JSON.stringify({ qr_data: code.data }),
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(response => response.json())
+                .then(data => updatePoints())
+                .catch(error => console.error("Error sending QR data:", error));
+
+                homeBtn.style.display = "block";
+                stopScan();
+            } else {
+                qrMessage.textContent = "Đang tìm mã QR...";
+                qrMessage.style.color = "black";
+                requestAnimationFrame(scanQRCode);
+            }
+        }
+
+        function stopScan() {
+            scanning = false;
+            video.srcObject.getTracks().forEach(track => track.stop());
+            video.style.display = "none";
+            canvas.style.display = "none";
+        }
+
+        function updatePoints() {
+            $.get("/get_points", function(data) {
+                if (data.status === "success") {
+                    $("#points").text(data.points);
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+
+        function logout() {
+            localStorage.removeItem("lastScannedQRCode");
+            window.location.href = "/logout";
+        }
+
+        function goHome() {
+            window.location.reload();
+        }
+    </script>
+</body>
+</html>

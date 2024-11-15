@@ -1,0 +1,117 @@
+{% extends 'app.html' %}
+
+{% block content %}
+<div class="form-container">
+  <h2>Login Form</h2>
+
+  {% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div class="alert alert-danger">
+        <ul>
+            {% for message in messages %}
+            <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+  {% endif %}
+  {% endwith %}
+
+  <form action="/login" method="POST">
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+        {{ form.email.label(for="email") }}
+        {{ form.email(id="email", class="form-control") }}
+        {% if form.email.errors %}
+            <ul class="error-list">
+                {% for error in form.email.errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div class="form-group">
+        {{ form.password.label(for="password") }}
+        {{ form.password(id="password", class="form-control") }}
+        {% if form.password.errors %}
+            <ul class="error-list">
+                {% for error in form.password.errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    {{ form.submit(class="btn btn-primary") }}
+    <div class="form-links">
+      <a href="/register" class="btn-link">Register</a> |
+      <a href="/forgot_password" class="btn-link">Forgot password?</a>
+    </div>
+  </form>
+</div>
+
+<style>
+  .form-container {
+    background-color: #f7f9fb;
+    padding: 40px;
+    max-width: 400px;
+    margin: auto;
+    border-radius: 8px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    font-family: Arial, sans-serif;
+  }
+
+  .form-container h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #333;
+  }
+
+  .form-control {
+    border-radius: 5px;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    transition: border-color 0.3s ease;
+  }
+
+  .form-control:focus {
+    border-color: #4FD8C2;
+    box-shadow: none;
+  }
+
+  .error-list {
+    color: #e74c3c;
+    font-size: 14px;
+    margin-top: 5px;
+  }
+
+  .btn-primary {
+    background-color: #4FD8C2;
+    color: white;
+    border: none;
+    padding: 10px;
+    width: 100%;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .btn-primary:hover {
+    background-color: #45c19d;
+  }
+
+  .form-links {
+    text-align: center;
+    margin-top: 20px;
+  }
+
+  .btn-link {
+    color: #4FD8C2;
+    text-decoration: none;
+  }
+
+  .btn-link:hover {
+    text-decoration: underline;
+  }
+</style>
+{% endblock %}
